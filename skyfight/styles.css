@@ -72,6 +72,94 @@ body {
   color: #a9deff;
 }
 
+#mobileControls {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9;
+}
+
+#mobileControls.hidden {
+  display: none;
+}
+
+.mobilePad {
+  position: absolute;
+  bottom: 14px;
+  display: flex;
+  gap: 8px;
+  pointer-events: auto;
+  align-items: flex-end;
+}
+
+.mobilePadLeft {
+  left: 12px;
+}
+
+.mobilePadRight {
+  right: 12px;
+}
+
+.mobilePad button {
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 12px;
+  min-width: 68px;
+  height: 54px;
+  padding: 0 12px;
+  background: rgba(8, 18, 38, 0.7);
+  color: #f2f7ff;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#touchStick {
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: radial-gradient(circle, rgba(140, 185, 245, 0.16), rgba(8, 18, 38, 0.62));
+  position: relative;
+  touch-action: none;
+}
+
+#touchStickKnob {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(25, 40, 70, 0.4);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.28);
+  pointer-events: none;
+}
+
+#touchStick.active #touchStickKnob {
+  background: rgba(255, 222, 138, 0.94);
+}
+
+.mobilePad button:active,
+.mobilePad button.pressed {
+  background: rgba(255, 217, 113, 0.86);
+  color: #18263d;
+}
+
+#touchFire {
+  min-width: 92px;
+  height: 64px;
+  background: rgba(180, 52, 52, 0.76);
+}
+
+#touchFire:active,
+#touchFire.pressed {
+  background: rgba(255, 111, 89, 0.92);
+}
+
 #statusLabel {
   min-height: 1em;
   color: #ffd87a;
@@ -393,4 +481,42 @@ body {
   color: #12314d;
   font-weight: bold;
   cursor: pointer;
+}
+
+@media (max-width: 700px) {
+  #hud {
+    top: 8px;
+    left: 8px;
+    font-size: 0.9rem;
+    padding: 8px 10px;
+  }
+
+  #radarCanvas {
+    top: 8px;
+    right: 8px;
+    width: 132px;
+    height: 132px;
+  }
+
+  .mobilePad {
+    bottom: 10px;
+    gap: 6px;
+  }
+
+  .mobilePad button {
+    min-width: 60px;
+    height: 50px;
+    border-radius: 10px;
+    font-size: 0.78rem;
+  }
+
+  #touchStick {
+    width: 116px;
+    height: 116px;
+  }
+
+  #touchStickKnob {
+    width: 50px;
+    height: 50px;
+  }
 }

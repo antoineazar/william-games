@@ -31,6 +31,10 @@ const leaderboardForm = document.getElementById("leaderboardForm");
 const leaderboardNameInput = document.getElementById("leaderboardNameInput");
 const instructionsOverlay = document.getElementById("instructionsOverlay");
 const startGameButton = document.getElementById("startGameButton");
+const mobileControls = document.getElementById("mobileControls");
+const touchStick = document.getElementById("touchStick");
+const touchStickKnob = document.getElementById("touchStickKnob");
+const touchFire = document.getElementById("touchFire");
 
 const input = {
   left: false,
@@ -47,6 +51,8 @@ const LEADERBOARD_SIZE = 20;
 let leaderboard = loadLeaderboard();
 let gameOverHandled = false;
 let hasStarted = false;
+const mobileMode = isMobileControlDevice();
+let joystickPointerId = null;
 renderLeaderboard(leaderboard);
 const backgroundMusic = createBackgroundMusic("./assets/music/CrabRaveLoop.mov");
 enableMusicOnFirstInteraction(backgroundMusic);
@@ -97,19 +103,23 @@ function onKeyChange(event, isDown) {
 window.addEventListener("resize", resizeCanvas);
 window.addEventListener("keydown", (event) => onKeyChange(event, true));
 window.addEventListener("keyup", (event) => onKeyChange(event, false));
+setupMobileControls();
 startGameButton.addEventListener("click", () => {
   hasStarted = true;
   instructionsOverlay.classList.add("hidden");
+  updateMobileControlsVisibility();
   lastTime = performance.now();
 });
 restartButton.addEventListener("click", () => {
   game.reset();
   gameOverHandled = false;
   hideLeaderboardPrompt();
+  updateMobileControlsVisibility();
 });
 nextLevelButton.addEventListener("click", () => {
   game.startNextLevel();
   gameOverHandled = false;
+  updateMobileControlsVisibility();
 });
 leaderboardForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -128,6 +138,7 @@ resizeCanvas();
 let lastTime = performance.now();
 function frame(now) {
   if (!hasStarted) {
+    updateMobileControlsVisibility();
     game.render();
     drawRadar(radarCtx, radarCanvas, game);
     requestAnimationFrame(frame);
@@ -141,6 +152,7 @@ function frame(now) {
   drawRadar(radarCtx, radarCanvas, game);
   updateHud(game, hudElements);
   handleGameOverLeaderboardFlow();
+  updateMobileControlsVisibility();
 
   requestAnimationFrame(frame);
 }
@@ -366,4 +378,122 @@ function renderLeaderboard(board) {
 function hideLeaderboardPrompt() {
   leaderboardPrompt.classList.add("hidden");
   leaderboardForm.classList.remove("hidden");
+}
+
+function isMobileControlDevice() {
+  return (
+    window.matchMedia("(pointer: coarse)").matches ||
+    window.matchMedia("(hover: none)").matches ||
+    navigator.maxTouchPoints > 0
+  );
+}
+
+function setupMobileControls() {
+  if (!mobileMode) return;
+  setupJoystickControl();
+  setupFireControl();
+  window.addEventListener("blur", clearTouchInputs);
+}
+
+function clearTouchInputs() {
+  input.left = false;
+  input.right = false;
+  input.throttleUp = false;
+  input.throttleDown = false;
+  input.fire = false;
+  joystickPointerId = null;
+  touchStick?.classList.remove("active");
+  resetStickVisual();
+  touchFire?.classList.remove("pressed");
+}
+
+function updateMobileControlsVisibility() {
+  if (!mobileMode || !mobileControls) return;
+  const shouldShow = hasStarted && !game.levelComplete && !game.isOver;
+  if (!shouldShow) clearTouchInputs();
+  mobileControls.classList.toggle("hidden", !shouldShow);
+}
+
+function setupJoystickControl() {
+  if (!touchStick || !touchStickKnob) return;
+
+  touchStick.addEventListener("pointerdown", (event) => {
+    if (!hasStarted) return;
+    event.preventDefault();
+    joystickPointerId = event.pointerId;
+    touchStick.classList.add("active");
+    updateStickFromEvent(event);
+    touchStick.setPointerCapture(event.pointerId);
+  });
+
+  touchStick.addEventListener("pointermove", (event) => {
+    if (event.pointerId !== joystickPointerId) return;
+    event.preventDefault();
+    updateStickFromEvent(event);
+  });
+
+  const stopJoystick = (event) => {
+    if (event.pointerId !== joystickPointerId) return;
+    joystickPointerId = null;
+    touchStick.classList.remove("active");
+    input.left = false;
+    input.right = false;
+    input.throttleUp = false;
+    input.throttleDown = false;
+    resetStickVisual();
+  };
+
+  touchStick.addEventListener("pointerup", stopJoystick);
+  touchStick.addEventListener("pointercancel", stopJoystick);
+}
+
+function setupFireControl() {
+  if (!touchFire) return;
+  touchFire.addEventListener("pointerdown", (event) => {
+    if (!hasStarted) return;
+    event.preventDefault();
+    input.fire = true;
+    touchFire.classList.add("pressed");
+    touchFire.setPointerCapture(event.pointerId);
+  });
+
+  const releaseFire = () => {
+    input.fire = false;
+    touchFire.classList.remove("pressed");
+  };
+
+  touchFire.addEventListener("pointerup", releaseFire);
+  touchFire.addEventListener("pointercancel", releaseFire);
+  touchFire.addEventListener("pointerleave", releaseFire);
+}
+
+function updateStickFromEvent(event) {
+  if (!touchStick || !touchStickKnob) return;
+  const rect = touchStick.getBoundingClientRect();
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+  const dx = event.clientX - centerX;
+  const dy = event.clientY - centerY;
+  const maxRadius = rect.width * 0.34;
+  const distance = Math.hypot(dx, dy);
+  const limited = distance > maxRadius && distance > 0 ? maxRadius / distance : 1;
+  const lx = dx * limited;
+  const ly = dy * limited;
+
+  touchStickKnob.style.transform = `translate(calc(-50% + ${lx}px), calc(-50% + ${ly}px))`;
+
+  const nx = lx / maxRadius;
+  const ny = ly / maxRadius;
+  const turnDeadzone = 0.2;
+  const throttleDeadzone = 0.24;
+
+  input.left = nx < -turnDeadzone;
+  input.right = nx > turnDeadzone;
+  input.throttleUp = ny < -throttleDeadzone;
+  input.throttleDown = ny > throttleDeadzone;
+}
+
+function resetStickVisual() {
+  if (!touchStickKnob) return;
+  touchStickKnob.style.transform = "translate(-50%, -50%)";
 }
