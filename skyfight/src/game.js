@@ -207,14 +207,19 @@ export class Game {
     const ctx = this.ctx;
     const w = this.canvas.width;
     const h = this.canvas.height;
+    const zoom = this.getViewportZoom();
+    const viewW = w / zoom;
+    const viewH = h / zoom;
 
-    this.camera.x = this.player.x - w / 2;
-    this.camera.y = this.player.y - h / 2;
-    this.camera.x = clamp(this.camera.x, 0, this.world.width - w);
-    this.camera.y = clamp(this.camera.y, 0, this.world.height - h);
+    this.camera.x = this.player.x - viewW / 2;
+    this.camera.y = this.player.y - viewH / 2;
+    this.camera.x = clamp(this.camera.x, 0, this.world.width - viewW);
+    this.camera.y = clamp(this.camera.y, 0, this.world.height - viewH);
 
     ctx.clearRect(0, 0, w, h);
-    this.drawSkyBackdrop();
+    ctx.save();
+    ctx.scale(zoom, zoom);
+    this.drawSkyBackdrop(viewW, viewH);
     this.drawSpeedLines();
     this.drawWorldGuides();
 
@@ -238,6 +243,12 @@ export class Game {
         this.drawDestroyedPlayerEffect();
       }
     }
+    if (this.levelComplete) {
+      const phase = this.getLevelCompletePhase();
+      if (phase === "flyby") this.drawLevelCompleteFlyby();
+    }
+    ctx.restore();
+
     this.drawArcadeBars(w);
     if (this.isBossIntroActive()) {
       this.drawBossIncomingWarning(w);
@@ -245,7 +256,6 @@ export class Game {
     if (this.levelComplete) {
       const phase = this.getLevelCompletePhase();
       if (phase === "text") this.drawLevelCompleteTextNoOverlay();
-      if (phase === "flyby") this.drawLevelCompleteFlyby();
     }
   }
 
@@ -552,10 +562,8 @@ export class Game {
     this.playerDestroyedAnim = Math.max(0, this.playerDestroyedAnim - dt);
   }
 
-  drawSkyBackdrop() {
+  drawSkyBackdrop(w = this.canvas.width, h = this.canvas.height) {
     const ctx = this.ctx;
-    const w = this.canvas.width;
-    const h = this.canvas.height;
     const theme = getEnvironmentTheme(this.level);
 
     const sky = ctx.createLinearGradient(0, 0, 0, h);
@@ -996,15 +1004,20 @@ export class Game {
   drawBossIncomingWarning(w) {
     const ctx = this.ctx;
     const pulse = 0.5 + 0.5 * Math.sin(performance.now() * 0.02);
+    const compact = this.isCompactViewport();
+    const small = this.canvas.width <= 760;
+    const fontSize = compact ? 28 : small ? 34 : 42;
+    const lineWidth = compact ? 4 : 6;
+    const y = compact ? 138 : small ? 128 : 120;
     ctx.save();
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    ctx.font = "bold 42px Arial";
-    ctx.lineWidth = 6;
+    ctx.font = `bold ${fontSize}px Arial`;
+    ctx.lineWidth = lineWidth;
     ctx.strokeStyle = `rgba(20, 20, 30, ${0.75 + pulse * 0.2})`;
     ctx.fillStyle = `rgba(255, 118, 98, ${0.68 + pulse * 0.3})`;
-    ctx.strokeText("WARNING: BOSS INCOMING", w / 2, 120);
-    ctx.fillText("WARNING: BOSS INCOMING", w / 2, 120);
+    ctx.strokeText("WARNING: BOSS INCOMING", w / 2, y);
+    ctx.fillText("WARNING: BOSS INCOMING", w / 2, y);
     ctx.restore();
   }
 
@@ -1035,14 +1048,15 @@ export class Game {
   drawLevelCompleteTextNoOverlay() {
     const ctx = this.ctx;
     const w = this.canvas.width;
+    const compact = this.isCompactViewport();
     ctx.save();
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
-    ctx.font = "bold 54px Arial";
+    ctx.font = compact ? "bold 38px Arial" : "bold 54px Arial";
     ctx.fillStyle = "rgba(255, 226, 132, 0.95)";
     ctx.strokeStyle = "rgba(20, 38, 64, 0.85)";
-    ctx.lineWidth = 6;
-    const y = 68;
+    ctx.lineWidth = compact ? 4 : 6;
+    const y = compact ? 96 : 68;
     const text = "LEVEL COMPLETE";
     ctx.strokeText(text, w / 2, y);
     ctx.fillText(text, w / 2, y);
@@ -1145,6 +1159,18 @@ export class Game {
     return clamp((this.player.speed - this.player.minSpeed) / range, 0, 1);
   }
 
+  getViewportZoom() {
+    const w = this.canvas.width;
+    const h = this.canvas.height;
+    if (w <= 430 || h <= 500) return 0.82;
+    if (w <= 760) return 0.9;
+    return 1;
+  }
+
+  isCompactViewport() {
+    return this.canvas.width <= 430 || this.canvas.height <= 500;
+  }
+
   findNearestTarget(x, y) {
     const view = this.getViewBounds();
     const candidates = [...this.enemies];
@@ -1165,8 +1191,9 @@ export class Game {
   }
 
   getViewBounds() {
-    const w = this.canvas.width;
-    const h = this.canvas.height;
+    const zoom = this.getViewportZoom();
+    const w = this.canvas.width / zoom;
+    const h = this.canvas.height / zoom;
     const x = clamp(this.player.x - w / 2, 0, this.world.width - w);
     const y = clamp(this.player.y - h / 2, 0, this.world.height - h);
     return { x, y, w, h };
