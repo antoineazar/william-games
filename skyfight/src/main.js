@@ -31,6 +31,9 @@ const leaderboardForm = document.getElementById("leaderboardForm");
 const leaderboardNameInput = document.getElementById("leaderboardNameInput");
 const instructionsOverlay = document.getElementById("instructionsOverlay");
 const startGameButton = document.getElementById("startGameButton");
+const controlsLine1 = document.getElementById("controlsLine1");
+const controlsLine2 = document.getElementById("controlsLine2");
+const controlsLine3 = document.getElementById("controlsLine3");
 const mobileControls = document.getElementById("mobileControls");
 const touchStick = document.getElementById("touchStick");
 const touchStickKnob = document.getElementById("touchStickKnob");
@@ -57,6 +60,7 @@ let gameOverHandled = false;
 let hasStarted = false;
 let mobileMode = isMobileControlDevice();
 let joystickPointerId = null;
+updateInstructionControlsCopy();
 renderLeaderboard(leaderboard);
 const backgroundMusic = createBackgroundMusic("./assets/music/CrabRaveLoop.mov");
 enableMusicOnFirstInteraction(backgroundMusic);
@@ -435,12 +439,20 @@ function enableMobileModeFromTouch(event) {
     event.type === "touchstart" || (event.type === "pointerdown" && event.pointerType === "touch");
   if (!isTouch || mobileMode) return;
   mobileMode = true;
+  updateInstructionControlsCopy();
   setupMobileControls();
   updateMobileControlsVisibility();
 }
 
 function setupJoystickControl() {
   if (!touchStick || !touchStickKnob) return;
+  const swallowTouchGesture = (event) => {
+    event.preventDefault();
+  };
+  touchStick.addEventListener("touchstart", swallowTouchGesture, { passive: false });
+  touchStick.addEventListener("touchmove", swallowTouchGesture, { passive: false });
+  touchStick.addEventListener("touchend", swallowTouchGesture, { passive: false });
+  touchStick.addEventListener("dblclick", swallowTouchGesture);
 
   touchStick.addEventListener("pointerdown", (event) => {
     if (!hasStarted) return;
@@ -478,6 +490,14 @@ function setupJoystickControl() {
 
 function setupFireControl() {
   if (!touchFire) return;
+  const swallowTouchGesture = (event) => {
+    event.preventDefault();
+  };
+  touchFire.addEventListener("touchstart", swallowTouchGesture, { passive: false });
+  touchFire.addEventListener("touchmove", swallowTouchGesture, { passive: false });
+  touchFire.addEventListener("touchend", swallowTouchGesture, { passive: false });
+  touchFire.addEventListener("dblclick", swallowTouchGesture);
+
   touchFire.addEventListener("pointerdown", (event) => {
     if (!hasStarted) return;
     event.preventDefault();
@@ -532,6 +552,20 @@ function resetStickVisual() {
   touchStickKnob.style.transform = "translate(-50%, -50%)";
 }
 
+function updateInstructionControlsCopy() {
+  if (!controlsLine1 || !controlsLine2 || !controlsLine3) return;
+  if (mobileMode) {
+    controlsLine1.innerHTML = "<strong>Left Joystick:</strong> point where you want to fly";
+    controlsLine2.innerHTML = "<strong>Joystick Pull:</strong> farther pull means faster speed";
+    controlsLine3.innerHTML = "<strong>FIRE Button:</strong> hold to shoot missiles";
+    return;
+  }
+
+  controlsLine1.innerHTML = "<strong>Left / Right Arrow:</strong> turn the plane";
+  controlsLine2.innerHTML = "<strong>Up / Down Arrow:</strong> accelerate / slow down";
+  controlsLine3.innerHTML = "<strong>Spacebar:</strong> fire missiles";
+}
+
 function preventMobileZoomGestures() {
   let lastTouchEnd = 0;
   document.addEventListener(
@@ -551,6 +585,15 @@ function preventMobileZoomGestures() {
   );
 
   const block = (event) => event.preventDefault();
+  document.addEventListener(
+    "touchmove",
+    (event) => {
+      if (event.touches && event.touches.length > 1) {
+        event.preventDefault();
+      }
+    },
+    { passive: false }
+  );
   document.addEventListener("gesturestart", block, { passive: false });
   document.addEventListener("gesturechange", block, { passive: false });
   document.addEventListener("gestureend", block, { passive: false });

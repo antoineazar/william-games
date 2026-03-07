@@ -48,6 +48,8 @@ export class Game {
     this.levelCompleteOverlayDelay = 2.4;
     this.levelCompleteTextDuration = 1.0;
     this.levelCompleteFlybyDuration = 2.2;
+    this.bossDefeatDelay = 1.15;
+    this.bossDefeatTimer = 0;
     this.bossIntroDuration = 2.0;
     this.bossIntroTimer = 0;
     this.level = 1;
@@ -101,6 +103,7 @@ export class Game {
     this.levelComplete = false;
     this.levelCompleteAnimTime = 0;
     this.bossIntroTimer = 0;
+    this.bossDefeatTimer = 0;
     this.levelPhase = "wave";
     this.waveKills = 0;
     this.waveSpawned = 0;
@@ -125,6 +128,16 @@ export class Game {
     }
     if (this.bossIntroTimer > 0) {
       this.bossIntroTimer = Math.max(0, this.bossIntroTimer - dt);
+      return;
+    }
+    if (this.bossDefeatTimer > 0) {
+      this.bossDefeatTimer = Math.max(0, this.bossDefeatTimer - dt);
+      this.updateExplosions(dt);
+      this.updatePlayerImpactEffects(dt);
+      if (this.bossDefeatTimer <= 0) {
+        this.levelComplete = true;
+        this.levelCompleteAnimTime = 0;
+      }
       return;
     }
     if (this.levelComplete) {
@@ -261,9 +274,10 @@ export class Game {
     this.activeEffects = {};
     this.player.fireInterval = this.jetConfig.fireInterval;
     const maxShield = this.getBossShield(this.level);
+    const spawn = this.getBossSpawnNearScreenEdge();
     this.boss = {
-      x: this.world.width * 0.5,
-      y: this.world.height * 0.24,
+      x: spawn.x,
+      y: spawn.y,
       angle: Math.PI / 2,
       speed: 120,
       turnRate: 1.1,
@@ -278,6 +292,33 @@ export class Game {
       wanderTimer: 1.1,
     };
     this.bossIntroTimer = this.bossIntroDuration;
+  }
+
+  getBossSpawnNearScreenEdge() {
+    const view = this.getViewBounds();
+    const inset = 58;
+    const side = Math.floor(Math.random() * 4);
+    let x = this.player.x;
+    let y = this.player.y;
+
+    if (side === 0) {
+      x = randomRange(view.x + inset, view.x + view.w - inset);
+      y = view.y + inset;
+    } else if (side === 1) {
+      x = randomRange(view.x + inset, view.x + view.w - inset);
+      y = view.y + view.h - inset;
+    } else if (side === 2) {
+      x = view.x + inset;
+      y = randomRange(view.y + inset, view.y + view.h - inset);
+    } else {
+      x = view.x + view.w - inset;
+      y = randomRange(view.y + inset, view.y + view.h - inset);
+    }
+
+    return {
+      x: clamp(x, 120, this.world.width - 120),
+      y: clamp(y, 120, this.world.height - 120),
+    };
   }
 
   updateBoss(dt, targetVisible) {
@@ -374,9 +415,8 @@ export class Game {
           this.spawnExplosion(this.boss.x, this.boss.y, this.boss.hp <= 0 ? "big" : "small");
           if (this.boss.hp <= 0) {
             this.score += 5;
+            this.triggerBossDefeatSequence(this.boss.x, this.boss.y);
             this.boss = null;
-            this.levelComplete = true;
-            this.levelCompleteAnimTime = 0;
           }
           continue;
         }
@@ -427,6 +467,21 @@ export class Game {
       });
     }
     this.explosions.push({ particles });
+  }
+
+  triggerBossDefeatSequence(x, y) {
+    this.levelPhase = "complete";
+    this.missiles = [];
+    this.powerups = [];
+    this.activeEffects = {};
+    this.player.fireInterval = this.jetConfig.fireInterval;
+    this.bossDefeatTimer = this.bossDefeatDelay;
+
+    // Multi-burst finale so the boss death reads clearly.
+    this.spawnExplosion(x, y, "big");
+    this.spawnExplosion(x + randomRange(-36, 36), y + randomRange(-28, 28), "big");
+    this.spawnExplosion(x + randomRange(-44, 44), y + randomRange(-34, 34), "small");
+    this.spawnExplosion(x + randomRange(-56, 56), y + randomRange(-40, 40), "small");
   }
 
   updateExplosions(dt) {
@@ -998,6 +1053,9 @@ export class Game {
     if (this.isBossIntroActive()) {
       return "Boss incoming...";
     }
+    if (this.bossDefeatTimer > 0) {
+      return "Target destroyed!";
+    }
     const activeTypes = Object.keys(this.activeEffects);
     if (this.godMode) {
       return "GOD MODE: Invincibility ON";
@@ -1220,6 +1278,7 @@ export class Game {
     this.activeEffects = {};
     this.player.fireInterval = this.jetConfig.fireInterval;
     this.bossIntroTimer = 0;
+    this.bossDefeatTimer = 0;
     this.levelComplete = true;
     this.levelCompleteAnimTime = 0;
     this.levelPhase = "complete";
