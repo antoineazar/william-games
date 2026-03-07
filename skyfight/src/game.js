@@ -1187,7 +1187,7 @@ export class Game {
   }
 
   getBossShield(level) {
-    return Math.ceil(5 * Math.pow(1.2, level - 1));
+    return Math.ceil(5 * Math.pow(1.5, level - 1));
   }
 
   getBossSpriteKeyForLevel(level) {

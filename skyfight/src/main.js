@@ -122,6 +122,7 @@ startGameButton.addEventListener("click", () => {
   lastTime = performance.now();
 });
 restartButton.addEventListener("click", () => {
+  maybeAutoSavePendingLeaderboardEntry();
   game.reset();
   gameOverHandled = false;
   hideLeaderboardPrompt();
@@ -389,6 +390,18 @@ function renderLeaderboard(board) {
 function hideLeaderboardPrompt() {
   leaderboardPrompt.classList.add("hidden");
   leaderboardForm.classList.remove("hidden");
+}
+
+function maybeAutoSavePendingLeaderboardEntry() {
+  if (!game.isOver) return;
+  const promptVisible = !leaderboardPrompt.classList.contains("hidden");
+  const formVisible = !leaderboardForm.classList.contains("hidden");
+  if (!promptVisible || !formVisible) return;
+
+  const safeName = sanitizeName(leaderboardNameInput.value);
+  leaderboard = addScore(leaderboard, safeName, game.score);
+  saveLeaderboard(leaderboard);
+  renderLeaderboard(leaderboard);
 }
 
 function isMobileControlDevice() {
