@@ -42,6 +42,10 @@ const input = {
   throttleUp: false,
   throttleDown: false,
   fire: false,
+  joystickX: 0,
+  joystickY: 0,
+  joystickStrength: 0,
+  joystickActive: false,
 };
 
 const sprites = await loadSprites(SPRITE_PATHS);
@@ -106,6 +110,7 @@ window.addEventListener("keyup", (event) => onKeyChange(event, false));
 window.addEventListener("touchstart", enableMobileModeFromTouch, { passive: true });
 window.addEventListener("pointerdown", enableMobileModeFromTouch, { passive: true });
 setupMobileControls();
+preventMobileZoomGestures();
 startGameButton.addEventListener("click", () => {
   hasStarted = true;
   instructionsOverlay.classList.add("hidden");
@@ -404,6 +409,10 @@ function clearTouchInputs() {
   input.throttleUp = false;
   input.throttleDown = false;
   input.fire = false;
+  input.joystickX = 0;
+  input.joystickY = 0;
+  input.joystickStrength = 0;
+  input.joystickActive = false;
   joystickPointerId = null;
   touchStick?.classList.remove("active");
   resetStickVisual();
@@ -456,6 +465,10 @@ function setupJoystickControl() {
     input.right = false;
     input.throttleUp = false;
     input.throttleDown = false;
+    input.joystickX = 0;
+    input.joystickY = 0;
+    input.joystickStrength = 0;
+    input.joystickActive = false;
     resetStickVisual();
   };
 
@@ -500,16 +513,45 @@ function updateStickFromEvent(event) {
 
   const nx = lx / maxRadius;
   const ny = ly / maxRadius;
-  const turnDeadzone = 0.2;
-  const throttleDeadzone = 0.24;
+  const strength = Math.min(1, Math.hypot(nx, ny));
+  const deadzone = 0.08;
+  const active = strength > deadzone;
 
-  input.left = nx < -turnDeadzone;
-  input.right = nx > turnDeadzone;
-  input.throttleUp = ny < -throttleDeadzone;
-  input.throttleDown = ny > throttleDeadzone;
+  input.joystickX = nx;
+  input.joystickY = ny;
+  input.joystickStrength = active ? (strength - deadzone) / (1 - deadzone) : 0;
+  input.joystickActive = active;
+  input.left = false;
+  input.right = false;
+  input.throttleUp = false;
+  input.throttleDown = false;
 }
 
 function resetStickVisual() {
   if (!touchStickKnob) return;
   touchStickKnob.style.transform = "translate(-50%, -50%)";
+}
+
+function preventMobileZoomGestures() {
+  let lastTouchEnd = 0;
+  document.addEventListener(
+    "touchend",
+    (event) => {
+      const now = Date.now();
+      const isDoubleTap = now - lastTouchEnd <= 320;
+      lastTouchEnd = now;
+      if (!isDoubleTap) return;
+
+      const target = event.target;
+      const tag = target && target.tagName ? target.tagName.toLowerCase() : "";
+      const allowNative = tag === "input" || tag === "textarea" || tag === "select";
+      if (!allowNative) event.preventDefault();
+    },
+    { passive: false }
+  );
+
+  const block = (event) => event.preventDefault();
+  document.addEventListener("gesturestart", block, { passive: false });
+  document.addEventListener("gesturechange", block, { passive: false });
+  document.addEventListener("gestureend", block, { passive: false });
 }

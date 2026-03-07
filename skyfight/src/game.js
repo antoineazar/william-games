@@ -58,6 +58,9 @@ export class Game {
     this.spawnTimer = 0;
     this.powerupSpawnTimer = randomRange(3, 6);
     this.jetConfig = this.getJetConfigForLevel(this.level);
+    this.player.maxHp = this.jetConfig.shield;
+    this.player.hp = this.player.maxHp;
+    this.player.fireInterval = this.jetConfig.fireInterval;
     this.godMode = false;
     this.clouds = this.createCloudField();
   }
@@ -1154,7 +1157,7 @@ export class Game {
       return {
         spriteKey: "jetStealth",
         label: "F-35",
-        shield: 7,
+        shield: 8,
         fireInterval: 0.22,
         shots: 3,
       };
@@ -1163,7 +1166,7 @@ export class Game {
       return {
         spriteKey: "jet4",
         label: "F-22",
-        shield: 6,
+        shield: 7,
         fireInterval: 0.22,
         shots: 2,
       };
@@ -1172,7 +1175,7 @@ export class Game {
       return {
         spriteKey: "f18",
         label: "F-18",
-        shield: 5,
+        shield: 6,
         fireInterval: 0.35,
         shots: 2,
       };
@@ -1181,7 +1184,7 @@ export class Game {
       return {
         spriteKey: "jet2",
         label: "F6F Hellcat",
-        shield: 4,
+        shield: 5,
         fireInterval: 0.35,
         shots: 1,
       };
@@ -1189,7 +1192,7 @@ export class Game {
     return {
       spriteKey: "jet1",
       label: "P51 Mustang",
-      shield: 3,
+      shield: 5,
       fireInterval: 0.35,
       shots: 1,
     };

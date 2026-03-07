@@ -16,13 +16,30 @@ export class Player {
   }
 
   update(dt, input, world) {
-    const turnInput = (input.left ? 1 : 0) - (input.right ? 1 : 0);
-    this.angle -= turnInput * this.turnRate * dt;
+    if (input.joystickActive) {
+      // Mobile: turn toward joystick heading at a limited rate.
+      const targetAngle = Math.atan2(input.joystickY, input.joystickX);
+      const delta = normalizeAngle(targetAngle - this.angle);
+      const maxTurn = this.turnRate * 1.75 * dt;
+      this.angle += Math.sign(delta) * Math.min(Math.abs(delta), maxTurn);
 
-    if (input.throttleUp) {
-      this.speed += this.acceleration * dt;
-    } else if (input.throttleDown) {
-      this.speed -= this.acceleration * dt;
+      // Pull distance controls target speed (acceleration feel).
+      const targetSpeed = this.minSpeed + (this.maxSpeed - this.minSpeed) * input.joystickStrength;
+      const accelRate = this.acceleration * 2.2;
+      if (this.speed < targetSpeed) {
+        this.speed = Math.min(targetSpeed, this.speed + accelRate * dt);
+      } else {
+        this.speed = Math.max(targetSpeed, this.speed - accelRate * dt);
+      }
+    } else {
+      const turnInput = (input.left ? 1 : 0) - (input.right ? 1 : 0);
+      this.angle -= turnInput * this.turnRate * dt;
+
+      if (input.throttleUp) {
+        this.speed += this.acceleration * dt;
+      } else if (input.throttleDown) {
+        this.speed -= this.acceleration * dt;
+      }
     }
 
     this.speed = Math.max(this.minSpeed, Math.min(this.maxSpeed, this.speed));
@@ -41,4 +58,11 @@ export class Player {
   onFire() {
     this.fireCooldown = this.fireInterval;
   }
+}
+
+function normalizeAngle(angle) {
+  let a = angle;
+  while (a > Math.PI) a -= Math.PI * 2;
+  while (a < -Math.PI) a += Math.PI * 2;
+  return a;
 }

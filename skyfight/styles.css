@@ -16,12 +16,29 @@ body {
   font-family: Arial, sans-serif;
   background: #0d2e5b;
   color: #f2f7ff;
+  touch-action: manipulation;
 }
 
 #gameRoot {
   position: relative;
   width: 100%;
   height: 100%;
+  touch-action: none;
+}
+
+#gameRoot,
+#gameRoot * {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+#gameRoot input,
+#gameRoot textarea,
+#gameRoot select {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
 }
 
 #gameCanvas {
@@ -196,6 +213,7 @@ body {
   width: min(760px, 94vw);
   max-height: 90vh;
   overflow: auto;
+  touch-action: pan-y;
   border-radius: 14px;
   border: 1px solid rgba(255, 220, 120, 0.42);
   background: rgba(8, 18, 38, 0.92);
@@ -299,6 +317,7 @@ body {
   padding-bottom: max(20px, env(safe-area-inset-bottom));
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
 
 #gameOverOverlay.hidden {
@@ -320,6 +339,7 @@ body {
   padding-bottom: max(20px, env(safe-area-inset-bottom));
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
 
 #levelCompleteOverlay.hidden {
@@ -413,6 +433,7 @@ body {
   width: min(520px, 90vw);
   max-height: 58vh;
   overflow: auto;
+  touch-action: pan-y;
   padding: 14px 16px;
   border-radius: 12px;
   border: 1px solid rgba(255, 220, 120, 0.4);
