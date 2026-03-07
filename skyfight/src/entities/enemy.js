@@ -26,6 +26,20 @@ export class Enemy {
         this.wanderTurn = (Math.random() - 0.5) * 1.4;
       }
       this.angle += this.wanderTurn * dt;
+
+      // When the player is cloaked, enemies wander. Steer inward before edges.
+      const edgePadding = 170;
+      const nearEdge =
+        this.x < edgePadding ||
+        this.x > world.width - edgePadding ||
+        this.y < edgePadding ||
+        this.y > world.height - edgePadding;
+      if (nearEdge) {
+        const centerAngle = Math.atan2(world.height * 0.5 - this.y, world.width * 0.5 - this.x);
+        const deltaToCenter = normalizeAngle(centerAngle - this.angle);
+        const avoidTurnRate = this.turnRate * 2.35;
+        this.angle += Math.sign(deltaToCenter) * Math.min(Math.abs(deltaToCenter), avoidTurnRate * dt);
+      }
     }
 
     this.x += Math.cos(this.angle) * this.speed * dt;
@@ -33,6 +47,16 @@ export class Enemy {
 
     this.x = Math.max(0, Math.min(world.width, this.x));
     this.y = Math.max(0, Math.min(world.height, this.y));
+
+    if (!targetVisible) {
+      // If already clipped to a border, immediately redirect toward map center.
+      const clipped = this.x <= 0 || this.x >= world.width || this.y <= 0 || this.y >= world.height;
+      if (clipped) {
+        this.angle =
+          Math.atan2(world.height * 0.5 - this.y, world.width * 0.5 - this.x) +
+          (Math.random() - 0.5) * 0.32;
+      }
+    }
     this.fireCooldown = Math.max(0, this.fireCooldown - dt);
   }
 
