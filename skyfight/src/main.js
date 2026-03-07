@@ -51,7 +51,7 @@ const LEADERBOARD_SIZE = 20;
 let leaderboard = loadLeaderboard();
 let gameOverHandled = false;
 let hasStarted = false;
-const mobileMode = isMobileControlDevice();
+let mobileMode = isMobileControlDevice();
 let joystickPointerId = null;
 renderLeaderboard(leaderboard);
 const backgroundMusic = createBackgroundMusic("./assets/music/CrabRaveLoop.mov");
@@ -103,6 +103,8 @@ function onKeyChange(event, isDown) {
 window.addEventListener("resize", resizeCanvas);
 window.addEventListener("keydown", (event) => onKeyChange(event, true));
 window.addEventListener("keyup", (event) => onKeyChange(event, false));
+window.addEventListener("touchstart", enableMobileModeFromTouch, { passive: true });
+window.addEventListener("pointerdown", enableMobileModeFromTouch, { passive: true });
 setupMobileControls();
 startGameButton.addEventListener("click", () => {
   hasStarted = true;
@@ -384,7 +386,8 @@ function isMobileControlDevice() {
   return (
     window.matchMedia("(pointer: coarse)").matches ||
     window.matchMedia("(hover: none)").matches ||
-    navigator.maxTouchPoints > 0
+    navigator.maxTouchPoints > 0 ||
+    /iphone|ipad|ipod|android|mobile/i.test(navigator.userAgent)
   );
 }
 
@@ -408,10 +411,23 @@ function clearTouchInputs() {
 }
 
 function updateMobileControlsVisibility() {
-  if (!mobileMode || !mobileControls) return;
+  if (!mobileControls) return;
+  if (!mobileMode) {
+    mobileControls.classList.add("hidden");
+    return;
+  }
   const shouldShow = hasStarted && !game.levelComplete && !game.isOver;
   if (!shouldShow) clearTouchInputs();
   mobileControls.classList.toggle("hidden", !shouldShow);
+}
+
+function enableMobileModeFromTouch(event) {
+  const isTouch =
+    event.type === "touchstart" || (event.type === "pointerdown" && event.pointerType === "touch");
+  if (!isTouch || mobileMode) return;
+  mobileMode = true;
+  setupMobileControls();
+  updateMobileControlsVisibility();
 }
 
 function setupJoystickControl() {
