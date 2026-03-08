@@ -1,6 +1,11 @@
 import { Game, SPRITE_PATHS } from "./game.js";
 import { drawRadar } from "./ui/radar.js";
 import { updateHud } from "./ui/hud.js";
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+
+const SUPABASE_URL = "https://vhfcodgvpytcamciirrf.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_0dNrU6JtxZd8uRPIk2DZ6Q_Jr2ASCTQ";
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const canvas = document.getElementById("gameCanvas");
 const radarCanvas = document.getElementById("radarCanvas");
@@ -55,7 +60,7 @@ const sprites = await loadSprites(SPRITE_PATHS);
 const game = new Game(canvas, sprites);
 const LEADERBOARD_KEY = "skyfight.leaderboard.v1";
 const LEADERBOARD_SIZE = 20;
-let leaderboard = loadLeaderboard();
+let leaderboard = await loadLeaderboard();
 let gameOverHandled = false;
 let hasStarted = false;
 let mobileMode = isMobileControlDevice();
@@ -133,16 +138,17 @@ nextLevelButton.addEventListener("click", () => {
   gameOverHandled = false;
   updateMobileControlsVisibility();
 });
-leaderboardForm.addEventListener("submit", (event) => {
+leaderboardForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!game.isOver) return;
 
   const safeName = sanitizeName(leaderboardNameInput.value);
-  leaderboard = addScore(leaderboard, safeName, game.score);
-  saveLeaderboard(leaderboard);
+  leaderboardPromptText.textContent = "Saving…";
+  leaderboardForm.classList.add("hidden");
+  await saveScore(safeName, game.score);
+  leaderboard = await loadLeaderboard();
   renderLeaderboard(leaderboard);
   leaderboardPromptText.textContent = "Score saved!";
-  leaderboardForm.classList.add("hidden");
 });
 
 resizeCanvas();
@@ -204,11 +210,12 @@ function enableMusicOnFirstInteraction(music) {
   startMusic();
 }
 
-function handleGameOverLeaderboardFlow() {
+async function handleGameOverLeaderboardFlow() {
   if (!game.isOver) return;
   if (gameOverHandled) return;
   gameOverHandled = true;
 
+  leaderboard = await loadLeaderboard();
   renderLeaderboard(leaderboard);
   if (isTopScore(game.score, leaderboard)) {
     leaderboardPromptText.textContent = "Top 20! Enter your name:";
@@ -327,7 +334,26 @@ function isBackgroundPixel(data, pixelIndex) {
   return brightness > 205 && max - min < 32;
 }
 
-function loadLeaderboard() {
+async function loadLeaderboard() {
+  try {
+    const { data, error } = await supabase
+      .from("skyfight_scores")
+      .select("name, score")
+      .order("score", { ascending: false })
+      .limit(LEADERBOARD_SIZE);
+
+    if (error) throw error;
+
+    return (data || []).map((entry) => ({
+      name: sanitizeName(entry.name),
+      score: Math.max(0, Math.floor(Number(entry.score) || 0)),
+    }));
+  } catch {
+    return loadLeaderboardLocal();
+  }
+}
+
+function loadLeaderboardLocal() {
   try {
     const raw = window.localStorage.getItem(LEADERBOARD_KEY);
     const parsed = raw ? JSON.parse(raw) : [];
@@ -346,8 +372,19 @@ function loadLeaderboard() {
   }
 }
 
-function saveLeaderboard(board) {
-  window.localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(board.slice(0, LEADERBOARD_SIZE)));
+async function saveScore(name, score) {
+  const safeScore = Math.max(0, Math.floor(score));
+  try {
+    const { error } = await supabase
+      .from("skyfight_scores")
+      .insert({ name, score: safeScore });
+    if (error) throw error;
+  } catch {
+    // Offline fallback: persist locally so the score isn't lost
+    const local = loadLeaderboardLocal();
+    const updated = addScore(local, name, safeScore);
+    window.localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(updated.slice(0, LEADERBOARD_SIZE)));
+  }
 }
 
 function addScore(board, name, score) {
@@ -399,9 +436,11 @@ function maybeAutoSavePendingLeaderboardEntry() {
   if (!promptVisible || !formVisible) return;
 
   const safeName = sanitizeName(leaderboardNameInput.value);
-  leaderboard = addScore(leaderboard, safeName, game.score);
-  saveLeaderboard(leaderboard);
-  renderLeaderboard(leaderboard);
+  // Fire-and-forget: we're about to reset, no need to await
+  saveScore(safeName, game.score).then(async () => {
+    leaderboard = await loadLeaderboard();
+    renderLeaderboard(leaderboard);
+  });
 }
 
 function isMobileControlDevice() {
