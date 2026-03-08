@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Will's Games</title>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap');
+
+      *, *::before, *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --sky: #0f172a;
+        --star: #e2e8f0;
+        --accent: #f59e0b;
+        --accent2: #38bdf8;
+        --card-bg: #1e293b;
+        --card-border: #334155;
+        --text: #f1f5f9;
+        --muted: #94a3b8;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        font-family: 'Nunito', sans-serif;
+        background-color: var(--sky);
+        color: var(--text);
+        min-height: 100vh;
+        overflow-x: hidden;
+      }
+
+      /* ── Stars background ── */
+      .stars {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 0;
+        overflow: hidden;
+      }
+
+      .star {
+        position: absolute;
+        background: white;
+        border-radius: 50%;
+        animation: twinkle var(--dur) ease-in-out infinite alternate;
+        opacity: 0;
+      }
+
+      @keyframes twinkle {
+        from { opacity: 0.1; transform: scale(1); }
+        to   { opacity: 0.8; transform: scale(1.4); }
+      }
+
+      /* ── Layout ── */
+      .page {
+        position: relative;
+        z-index: 1;
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 2rem 1.5rem 4rem;
+      }
+
+      /* ── Header ── */
+      header {
+        text-align: center;
+        padding: 3rem 0 2rem;
+      }
+
+      .badge {
+        display: inline-block;
+        background: var(--accent);
+        color: #1c1c1c;
+        font-weight: 800;
+        font-size: 0.75rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        padding: 0.3rem 0.9rem;
+        border-radius: 999px;
+        margin-bottom: 1rem;
+      }
+
+      header h1 {
+        font-family: 'Fredoka One', cursive;
+        font-size: clamp(2.8rem, 8vw, 5rem);
+        line-height: 1.05;
+        background: linear-gradient(135deg, #f59e0b 0%, #fb923c 40%, #f472b6 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        letter-spacing: 0.01em;
+      }
+
+      .subtitle {
+        margin-top: 0.75rem;
+        font-size: 1.1rem;
+        color: var(--muted);
+        font-weight: 600;
+        max-width: 480px;
+        margin-inline: auto;
+        line-height: 1.6;
+      }
+
+      /* ── Section title ── */
+      .section-title {
+        font-family: 'Fredoka One', cursive;
+        font-size: 1.6rem;
+        color: var(--accent2);
+        margin: 3rem 0 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .section-title::after {
+        content: '';
+        flex: 1;
+        height: 2px;
+        background: linear-gradient(to right, var(--card-border), transparent);
+        border-radius: 2px;
+      }
+
+      /* ── Game cards ── */
+      .games-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+        gap: 1.5rem;
+      }
+
+      .game-card {
+        background: var(--card-bg);
+        border: 1.5px solid var(--card-border);
+        border-radius: 20px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        text-decoration: none;
+        color: inherit;
+      }
+
+      .game-card:hover {
+        transform: translateY(-6px) scale(1.01);
+        box-shadow: 0 20px 48px rgba(0, 0, 0, 0.5), 0 0 0 1.5px var(--card-glow, #f59e0b66);
+        border-color: var(--card-glow, #f59e0b);
+      }
+
+      .game-card:focus-visible {
+        outline: 3px solid var(--accent2);
+        outline-offset: 3px;
+      }
+
+      .card-thumb {
+        background: var(--thumb-bg, #0c1a2e);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 170px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .card-thumb .thumb-emoji {
+        font-size: 5.5rem;
+        filter: drop-shadow(0 0 24px var(--card-glow, #f59e0baa));
+        animation: float 3s ease-in-out infinite alternate;
+        user-select: none;
+      }
+
+      @keyframes float {
+        from { transform: translateY(0) rotate(-3deg); }
+        to   { transform: translateY(-10px) rotate(3deg); }
+      }
+
+      .card-thumb::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at 50% 60%, var(--card-glow, #f59e0b22) 0%, transparent 70%);
+      }
+
+      .card-body {
+        padding: 1.3rem 1.4rem 1.5rem;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      .card-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--card-accent, #f59e0b);
+        margin-bottom: 0.1rem;
+      }
+
+      .card-title {
+        font-family: 'Fredoka One', cursive;
+        font-size: 1.65rem;
+        line-height: 1.1;
+      }
+
+      .card-desc {
+        font-size: 0.93rem;
+        color: var(--muted);
+        line-height: 1.6;
+        flex: 1;
+      }
+
+      .card-controls {
+        margin-top: 0.6rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem;
+      }
+
+      .control-pill {
+        background: #0f172a;
+        border: 1px solid var(--card-border);
+        border-radius: 8px;
+        font-size: 0.78rem;
+        font-weight: 700;
+        padding: 0.25rem 0.6rem;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+
+      .control-pill kbd {
+        background: #334155;
+        border-radius: 4px;
+        padding: 0 4px;
+        font-family: inherit;
+        font-size: 0.78rem;
+      }
+
+      .play-btn {
+        margin-top: 1rem;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: linear-gradient(135deg, var(--card-accent, #f59e0b), var(--card-accent2, #fb923c));
+        color: #1c1c1c;
+        font-weight: 800;
+        font-size: 0.9rem;
+        padding: 0.6rem 1.2rem;
+        border-radius: 12px;
+        align-self: flex-start;
+        transition: opacity 0.15s;
+      }
+
+      .game-card:hover .play-btn {
+        opacity: 0.9;
+      }
+
+      /* Skyfight theme */
+      .card-skyfight {
+        --card-glow: #38bdf8;
+        --card-accent: #38bdf8;
+        --card-accent2: #818cf8;
+        --thumb-bg: #060f1e;
+      }
+
+      /* Supercopter theme */
+      .card-supercopter {
+        --card-glow: #4ade80;
+        --card-accent: #4ade80;
+        --card-accent2: #34d399;
+        --thumb-bg: #071910;
+      }
+
+      /* ── About strip ── */
+      .about-strip {
+        margin-top: 3.5rem;
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        border: 1.5px solid var(--card-border);
+        border-radius: 20px;
+        padding: 2rem 2rem 2rem;
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        flex-wrap: wrap;
+      }
+
+      .about-avatar {
+        font-size: 4rem;
+        flex-shrink: 0;
+        animation: float 4s ease-in-out infinite alternate;
+      }
+
+      .about-text h2 {
+        font-family: 'Fredoka One', cursive;
+        font-size: 1.4rem;
+        color: var(--accent);
+        margin-bottom: 0.4rem;
+      }
+
+      .about-text p {
+        font-size: 0.95rem;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      /* ── Footer ── */
+      footer {
+        text-align: center;
+        margin-top: 3rem;
+        font-size: 0.82rem;
+        color: #475569;
+        font-weight: 600;
+      }
+
+      footer span {
+        color: #f472b6;
+      }
+    </style>
+  </head>
+  <body>
+
+    <!-- Starfield -->
+    <div class="stars" id="stars"></div>
+
+    <div class="page">
+      <header>
+        <div class="badge">🎮 Game Arcade</div>
+        <h1>Will's Games</h1>
+        <p class="subtitle">Games made by William, age 8 — pick one and start playing!</p>
+      </header>
+
+      <p class="section-title">🕹️ Play Now</p>
+
+      <div class="games-grid">
+
+        <!-- Skyfight -->
+        <a class="game-card card-skyfight" href="./skyfight/index.html">
+          <div class="card-thumb">
+            <span class="thumb-emoji">✈️</span>
+          </div>
+          <div class="card-body">
+            <span class="card-tag">✈️ Action</span>
+            <div class="card-title">Skyfight</div>
+            <p class="card-desc">
+              Fly your F-18 jet and blast enemy MiGs out of the sky! Dodge missiles, collect powerups, and survive boss battles.
+            </p>
+            <div class="card-controls">
+              <span class="control-pill"><kbd>↑ ↓ ← →</kbd> fly</span>
+              <span class="control-pill"><kbd>Space</kbd> fire</span>
+              <span class="control-pill">Touch friendly</span>
+            </div>
+            <div class="play-btn">Play Skyfight →</div>
+          </div>
+        </a>
+
+        <!-- Supercopter -->
+        <a class="game-card card-supercopter" href="./supercopter/index.html">
+          <div class="card-thumb">
+            <span class="thumb-emoji">🚁</span>
+          </div>
+          <div class="card-body">
+            <span class="card-tag">🚁 Rescue</span>
+            <div class="card-title">Supercopter</div>
+            <p class="card-desc">
+              Pilot your rescue helicopter, pick up civilians from the warzone, and bring them safely back to base!
+            </p>
+            <div class="card-controls">
+              <span class="control-pill"><kbd>↑ ↓ ← →</kbd> fly</span>
+              <span class="control-pill">Fly low to rescue</span>
+            </div>
+            <div class="play-btn">Play Supercopter →</div>
+          </div>
+        </a>
+
+      </div>
+
+      <div class="about-strip">
+        <div class="about-avatar">👦</div>
+        <div class="about-text">
+          <h2>Hi, I'm William!</h2>
+          <p>
+            I'm 8 years old and I love making games for my friends to play.
+            I made all of these games myself — I hope you have fun!
+            More games are coming soon. 🚀
+          </p>
+        </div>
+      </div>
+
+      <footer>
+        Made with <span>♥</span> by William
+      </footer>
+    </div>
+
+    <script>
+      // Generate random stars
+      const container = document.getElementById('stars');
+      for (let i = 0; i < 120; i++) {
+        const s = document.createElement('div');
+        s.className = 'star';
+        const size = Math.random() * 2.5 + 0.5;
+        s.style.cssText = `
+          width: ${size}px;
+          height: ${size}px;
+          top: ${Math.random() * 100}%;
+          left: ${Math.random() * 100}%;
+          --dur: ${(Math.random() * 3 + 1.5).toFixed(2)}s;
+          animation-delay: ${(Math.random() * 4).toFixed(2)}s;
+        `;
+        container.appendChild(s);
+      }
+    </script>
+  </body>
+</html>
