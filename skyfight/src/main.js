@@ -67,7 +67,7 @@ let mobileMode = isMobileControlDevice();
 let joystickPointerId = null;
 updateInstructionControlsCopy();
 renderLeaderboard(leaderboard);
-const backgroundMusic = createBackgroundMusic("./assets/music/CrabRaveLoop.mov");
+const backgroundMusic = createBackgroundMusic("./assets/music/CrabRaveLoop.mp3");
 enableMusicOnFirstInteraction(backgroundMusic);
 let cheatBuffer = "";
 
@@ -576,6 +576,10 @@ function updateStickFromEvent(event) {
   const dx = event.clientX - centerX;
   const dy = event.clientY - centerY;
   const maxRadius = rect.width * 0.34;
+  // Full speed only when finger is dragged clearly outside the circle.
+  // The knob visual still clamps at the rim, but strength reaches 1.0
+  // only once the raw finger distance exceeds the outer boost radius.
+  const boostRadius = maxRadius * 1.5;
   const distance = Math.hypot(dx, dy);
   const limited = distance > maxRadius && distance > 0 ? maxRadius / distance : 1;
   const lx = dx * limited;
@@ -583,14 +587,14 @@ function updateStickFromEvent(event) {
 
   touchStickKnob.style.transform = `translate(calc(-50% + ${lx}px), calc(-50% + ${ly}px))`;
 
-  const nx = lx / maxRadius;
-  const ny = ly / maxRadius;
-  const strength = Math.min(1, Math.hypot(nx, ny));
+  const rawStrength = distance / boostRadius;
+  const strength = Math.min(1, rawStrength);
   const deadzone = 0.08;
   const active = strength > deadzone;
 
-  input.joystickX = nx;
-  input.joystickY = ny;
+  const dir = distance > 0 ? 1 / distance : 0;
+  input.joystickX = dx * dir;
+  input.joystickY = dy * dir;
   input.joystickStrength = active ? (strength - deadzone) / (1 - deadzone) : 0;
   input.joystickActive = active;
   input.left = false;

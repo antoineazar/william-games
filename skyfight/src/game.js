@@ -285,22 +285,23 @@ export class Game {
     this.player.fireInterval = this.jetConfig.fireInterval;
     const maxShield = this.getBossShield(this.level);
     const spawn = this.getBossSpawnNearScreenEdge();
-    this.boss = {
-      x: spawn.x,
-      y: spawn.y,
-      angle: Math.PI / 2,
-      speed: 120,
-      turnRate: 1.1,
-      radius: 56,
-      maxHp: maxShield,
-      hp: maxShield,
-      fireCooldown: 0.8,
-      fireInterval: 0.95,
-      shots: this.getBossShotCount(this.level),
-      attackRange: 920,
-      wanderTurn: 0.4,
-      wanderTimer: 1.1,
-    };
+      this.boss = {
+        x: spawn.x,
+        y: spawn.y,
+        angle: Math.PI / 2,
+        speed: 120,
+        turnRate: 1.1,
+        radius: 56,
+        maxHp: maxShield,
+        hp: maxShield,
+        fireCooldown: 0.8,
+        fireInterval: 0.95,
+        shots: this.getBossShotCount(this.level),
+        attackRange: 920,
+        wanderTurn: 0.4,
+        wanderTimer: 1.1,
+        hitFlash: 0,
+      };
     this.bossIntroTimer = this.bossIntroDuration;
   }
 
@@ -354,6 +355,7 @@ export class Game {
     boss.y = clamp(boss.y, 120, this.world.height - 120);
 
     boss.fireCooldown -= dt;
+    boss.hitFlash = Math.max(0, (boss.hitFlash || 0) - dt);
     if (targetVisible && boss.fireCooldown <= 0 && distance(boss, this.player) <= boss.attackRange) {
       this.fireBossMissile();
       boss.fireCooldown = boss.fireInterval;
@@ -421,8 +423,9 @@ export class Game {
 
         if (this.boss && isSweptColliding(missile, this.boss)) {
           this.boss.hp -= 1;
+          this.boss.hitFlash = 0.18;
           missile.life = 0;
-          this.spawnExplosion(this.boss.x, this.boss.y, this.boss.hp <= 0 ? "big" : "small");
+          this.spawnExplosion(this.boss.x, this.boss.y, this.boss.hp <= 0 ? "boss" : "small");
           if (this.boss.hp <= 0) {
             this.score += 5;
             this.triggerBossDefeatSequence(this.boss.x, this.boss.y);
@@ -456,11 +459,12 @@ export class Game {
 
   spawnExplosion(x, y, size) {
     const particles = [];
-    const count = size === "big" ? 24 : 10;
-    const speedMin = size === "big" ? 100 : 70;
-    const speedMax = size === "big" ? 280 : 170;
-    const lifeMin = size === "big" ? 0.32 : 0.2;
-    const lifeMax = size === "big" ? 0.72 : 0.45;
+    const count = size === "boss" ? 52 : size === "big" ? 24 : 10;
+    const speedMin = size === "boss" ? 160 : size === "big" ? 100 : 70;
+    const speedMax = size === "boss" ? 480 : size === "big" ? 280 : 170;
+    const lifeMin = size === "boss" ? 0.45 : size === "big" ? 0.32 : 0.2;
+    const lifeMax = size === "boss" ? 1.1 : size === "big" ? 0.72 : 0.45;
+    const radiusMax = size === "boss" ? 11 : 7;
 
     for (let i = 0; i < count; i += 1) {
       const angle = Math.random() * Math.PI * 2;
@@ -471,7 +475,7 @@ export class Game {
         y,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        radius: 2 + Math.random() * 5,
+        radius: 2 + Math.random() * radiusMax,
         life,
         maxLife: life,
       });
@@ -488,10 +492,11 @@ export class Game {
     this.bossDefeatTimer = this.bossDefeatDelay;
 
     // Multi-burst finale so the boss death reads clearly.
-    this.spawnExplosion(x, y, "big");
-    this.spawnExplosion(x + randomRange(-36, 36), y + randomRange(-28, 28), "big");
-    this.spawnExplosion(x + randomRange(-44, 44), y + randomRange(-34, 34), "small");
-    this.spawnExplosion(x + randomRange(-56, 56), y + randomRange(-40, 40), "small");
+    this.spawnExplosion(x, y, "boss");
+    this.spawnExplosion(x + randomRange(-60, 60), y + randomRange(-50, 50), "boss");
+    this.spawnExplosion(x + randomRange(-80, 80), y + randomRange(-60, 60), "big");
+    this.spawnExplosion(x + randomRange(-90, 90), y + randomRange(-70, 70), "big");
+    this.spawnExplosion(x + randomRange(-50, 50), y + randomRange(-40, 40), "big");
   }
 
   updateExplosions(dt) {
@@ -699,19 +704,49 @@ export class Game {
     const sx = this.boss.x - this.camera.x;
     const sy = this.boss.y - this.camera.y;
     const ctx = this.ctx;
+    const size = 170;
 
     if (bossSprite) {
-      ctx.save();
-      ctx.translate(sx, sy);
-      ctx.rotate(this.boss.angle + Math.PI / 2);
-      const size = 170;
-      ctx.drawImage(bossSprite, -size / 2, -size / 2, size, size);
-      ctx.restore();
+      const flashAlpha = this.boss.hitFlash > 0 ? (this.boss.hitFlash / 0.18) * 0.72 : 0;
+
+      if (flashAlpha > 0) {
+        // Tint in an offscreen canvas so source-atop clips to the sprite's own
+        // opaque pixels rather than to whatever is already on the main canvas.
+        if (!this._bossFlashCanvas) {
+          this._bossFlashCanvas = document.createElement("canvas");
+        }
+        const fc = this._bossFlashCanvas;
+        fc.width = size;
+        fc.height = size;
+        const fctx = fc.getContext("2d");
+        fctx.clearRect(0, 0, size, size);
+        fctx.drawImage(bossSprite, 0, 0, size, size);
+        fctx.globalCompositeOperation = "source-atop";
+        fctx.fillStyle = `rgba(255, 40, 40, ${flashAlpha})`;
+        fctx.fillRect(0, 0, size, size);
+        fctx.globalCompositeOperation = "source-over";
+
+        ctx.save();
+        ctx.translate(sx, sy);
+        ctx.rotate(this.boss.angle + Math.PI / 2);
+        ctx.drawImage(fc, -size / 2, -size / 2, size, size);
+        ctx.restore();
+      } else {
+        ctx.save();
+        ctx.translate(sx, sy);
+        ctx.rotate(this.boss.angle + Math.PI / 2);
+        ctx.drawImage(bossSprite, -size / 2, -size / 2, size, size);
+        ctx.restore();
+      }
     } else {
       ctx.save();
       ctx.translate(sx, sy);
       ctx.rotate(this.boss.angle);
-      ctx.fillStyle = "#cb5d5d";
+      const flashAlpha = this.boss.hitFlash > 0 ? this.boss.hitFlash / 0.18 : 0;
+      const r = Math.round(203 + 52 * flashAlpha);
+      const g = Math.round(93 * (1 - flashAlpha));
+      const b = Math.round(93 * (1 - flashAlpha));
+      ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
       ctx.beginPath();
       ctx.moveTo(70, 0);
       ctx.lineTo(-58, -34);
